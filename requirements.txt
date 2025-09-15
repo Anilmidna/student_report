@@ -5,3 +5,7 @@ matplotlib
 python-docx
 docx2pdf
 reportlab
+pypandoc
+subprocess
+zipfile
+os
