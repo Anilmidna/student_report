@@ -1,4 +1,5 @@
-import openai
+from openai import OpenAI
+from dotenv import load_dotenv
 import pandas as pd
 import matplotlib.pyplot as plt
 from docx import Document
@@ -7,7 +8,11 @@ from docx2pdf import convert
 import os
 from concurrent.futures import ThreadPoolExecutor
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
+load_dotenv()  # Load environment variables from .env file
+client = OpenAI(
+    api_key=os.getenv("OPENAI_API_KEY"),
+    base_url="https://api.openai.com/v1"  # explicitly set the base URL for OpenAI platform
+)
 
 def make_prompt(student_row):
     name = student_row['Name']
@@ -28,12 +33,12 @@ Make the report detailed and constructive.
     return prompt
 
 def get_report_text(prompt):
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": prompt}],
         max_tokens=500
     )
-    return response['choices'][0]['message']['content']
+    return response.choices[0].message.content
 
 def generate_chart(student_name, scores):
     plt.figure(figsize=(6,4))
@@ -43,7 +48,8 @@ def generate_chart(student_name, scores):
     plt.title(f"{student_name} - Performance")
     plt.ylabel("Score")
     plt.tight_layout()
-    chart_path = f"{student_name}_chart.png"
+    chart_path = os.path.join('reports', f"{student_name}_chart.png")
+    os.makedirs('reports', exist_ok=True)
     plt.savefig(chart_path)
     plt.close()
     return chart_path
@@ -59,11 +65,13 @@ def save_docx(student_name, report_text, chart_path):
 
 def docx_to_pdf(docx_path):
     pdf_path = docx_path.replace(".docx", ".pdf")
+    os.makedirs('reports', exist_ok=True)
     convert(docx_path, pdf_path)
     return pdf_path
 
 def batch_generate_reports(df):
-    report_paths = []
+    os.makedirs('reports', exist_ok=True)
+    docx_files = []
     with ThreadPoolExecutor(max_workers=5) as executor:
         prompts = [make_prompt(row) for _, row in df.iterrows()]
         futures = [executor.submit(get_report_text, prompt) for prompt in prompts]
@@ -72,8 +80,19 @@ def batch_generate_reports(df):
         student_name = row['Name']
         scores = row.drop('Name').to_dict()
         chart_path = generate_chart(student_name, scores)
-        report_text = report_texts[idx]
-        docx_path = save_docx(student_name, report_text, chart_path)
-        report_paths.append(docx_path)
+        
+        # Create Word document
+        doc = Document()
+        doc.add_heading(f'Student Performance Report - {student_name}', 0)
+        doc.add_paragraph(report_texts[idx])
+        doc.add_picture(chart_path, width=Inches(6))
+        
+        # Save document in reports folder
+        docx_path = os.path.join('reports', f"{student_name}_report.docx")
+        doc.save(docx_path)
+        docx_files.append(docx_path)
+        
+        # Clean up chart file
         os.remove(chart_path)
-    return report_paths
+    
+    return docx_files
