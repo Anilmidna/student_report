@@ -83,9 +83,38 @@ def batch_generate_reports(df):
         
         # Create Word document
         doc = Document()
-        doc.add_heading(f'Student Performance Report - {student_name}', 0)
+        
+        # Add header with logo
+        section = doc.sections[0]
+        header = section.header
+        header_table = header.add_table(1, 2, width=Inches(8))
+        header_table.style = 'Table Grid'
+        header_cells = header_table.rows[0].cells
+        # Add logo
+        logo_path = os.path.join('assets', 'devpro-logo.png')
+        header_cells[0].add_paragraph().add_run().add_picture(logo_path, width=Inches(2))
+        # Add report title in header
+        header_title = header_cells[1].add_paragraph('Student Performance Report')
+        header_title.style = doc.styles['Heading 1']
+        
+        # Add title
+        title = doc.add_heading(f'{student_name}', 0)
+        title.style = doc.styles['Title']
+        
+        # Add sections with formatted headings
+        doc.add_heading('Performance Analysis', level=1)
         doc.add_paragraph(report_texts[idx])
+        
+        # Add chart section
+        doc.add_heading('Performance Chart', level=1)
         doc.add_picture(chart_path, width=Inches(6))
+        
+        # Add footer
+        section = doc.sections[0]
+        footer = section.footer
+        footer_text = footer.add_paragraph()
+        footer_text.text = f"Generated on {pd.Timestamp.now().strftime('%Y-%m-%d')}"
+        footer_text.style = doc.styles['Footer']
         
         # Save document in reports folder
         docx_path = os.path.join('reports', f"{student_name}_report.docx")
