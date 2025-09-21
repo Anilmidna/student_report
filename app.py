@@ -17,7 +17,7 @@ if uploaded_file:
     if st.button("Generate DOCX Reports"):
         docx_files = batch_generate_reports(df)
         st.success("DOCX reports generated! You can download individual files below.")
-        
+
         # Display individual DOCX file download buttons
         st.subheader("Download Individual DOCX Reports")
         for docx_file in docx_files:
@@ -28,24 +28,17 @@ if uploaded_file:
                     file_name=os.path.basename(docx_file),
                     key=docx_file  # Unique key for each button
                 )
-        
-        st.subheader("Convert to PDF and Download All")
-        if st.button("Convert to PDF and Download ZIP"):
-            pdf_files = []
-            for docx_file in docx_files:
-                pdf_path = docx_to_pdf(docx_file)
-                pdf_files.append(pdf_path)
-            zip_name = "student_reports.zip"
-            with zipfile.ZipFile(zip_name, 'w') as zipf:
-                for f in pdf_files:
-                    zipf.write(f, os.path.basename(f))
-            with open(zip_name, "rb") as fp:
-                st.download_button(
-                    "Download All PDFs (ZIP)", 
-                    fp, 
-                    file_name=zip_name,
-                    key="pdf_zip"  # Unique key for the ZIP button
-                )
-            for f in pdf_files + docx_files:
-                os.remove(f)
-            os.remove(zip_name)
+
+        # Zip all DOCX files and keep ZIP available for download
+        zip_name = "student_reports_docx.zip"
+        with zipfile.ZipFile(zip_name, 'w') as zipf:
+            for f in docx_files:
+                zipf.write(f, os.path.basename(f))
+        st.subheader("Download All DOCX Reports as ZIP")
+        with open(zip_name, "rb") as fp:
+            st.download_button(
+                "Download All DOCX (ZIP)", 
+                fp, 
+                file_name=zip_name,
+                key="docx_zip"  # Unique key for the ZIP button
+            )
