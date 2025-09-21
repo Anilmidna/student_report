@@ -80,48 +80,44 @@ def batch_generate_reports(df):
         student_name = row['Name']
         scores = row.drop('Name').to_dict()
         chart_path = generate_chart(student_name, scores)
-        
+
         # Create Word document
         doc = Document()
-        
-        # Add header with logo
+
+        # Add new logo to top center in header
         section = doc.sections[0]
         header = section.header
-        header_table = header.add_table(1, 2, width=Inches(8))
-        header_table.style = 'Table Grid'
-        header_cells = header_table.rows[0].cells
-        # Add logo
-        logo_path = os.path.join('assets', 'devpro-logo.png')
-        header_cells[0].add_paragraph().add_run().add_picture(logo_path, width=Inches(2))
-        # Add report title in header
-        header_title = header_cells[1].add_paragraph('Student Performance Report')
-        header_title.style = doc.styles['Heading 1']
-        
-        # Add title
-        title = doc.add_heading(f'{student_name}', 0)
-        title.style = doc.styles['Title']
-        
+        header_paragraph = header.paragraphs[0]
+        run = header_paragraph.add_run()
+        run.add_picture(os.path.join('assets', 'devpro GRT Logo.png'), width=Inches(2.5))
+        header_paragraph.alignment = 1  # Center
+
+        # Add header text
+        doc.add_paragraph("IGNITE 2025 - STUDENT REPORT", style='Title').alignment = 1
+
+        # Add name field
+        doc.add_paragraph(f"Name of the Student: {student_name}", style='Heading 2')
+
         # Add sections with formatted headings
         doc.add_heading('Performance Analysis', level=1)
         doc.add_paragraph(report_texts[idx])
-        
+
         # Add chart section
         doc.add_heading('Performance Chart', level=1)
         doc.add_picture(chart_path, width=Inches(6))
-        
+
         # Add footer
         section = doc.sections[0]
         footer = section.footer
         footer_text = footer.add_paragraph()
         footer_text.text = f"Generated on {pd.Timestamp.now().strftime('%Y-%m-%d')}"
         footer_text.style = doc.styles['Footer']
-        
+
         # Save document in reports folder
         docx_path = os.path.join('reports', f"{student_name}_report.docx")
         doc.save(docx_path)
         docx_files.append(docx_path)
-        
+
         # Clean up chart file
         os.remove(chart_path)
-    
     return docx_files
